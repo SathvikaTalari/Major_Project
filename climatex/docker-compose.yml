@@ -1,0 +1,44 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_USER: climatex
+      POSTGRES_PASSWORD: climatex_dev_password
+      POSTGRES_DB: climatex_eo
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgis_data:/var/lib/postgresql/data
+
+  backend:
+    build: ./backend
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://climatex:climatex_dev_password@db:5432/climatex_eo
+      RASTER_STORAGE_PATH: /data/rasters
+    volumes:
+      - ./backend:/app
+      - raster_store:/data/rasters
+    depends_on:
+      - db
+
+  frontend:
+    build: ./frontend
+    command: npm run dev
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+
+volumes:
+  postgis_data:
+  raster_store:
